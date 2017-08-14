@@ -376,7 +376,7 @@ Dtype Net<Dtype>::findMax(Blob<Dtype>* blob) {
   int cnt = blob->count();
   Dtype max_val = (Dtype)-10;
   for (int i = 0; i < cnt; ++i) {
-    max_val = std::max(max_val, (Dtype)fabs(data[i]));
+    max_val = std::max(max_val, (Dtype)fabs(data[i]));//jue dui zhi
   }
   return max_val;
 }
@@ -388,7 +388,8 @@ void Net<Dtype>::RangeInLayers(vector<string>* layer_name,
   if(layer_name->size()==0) {
     for (int layer_id = 0; layer_id < layers_.size(); ++layer_id) {
       if (strcmp(layers_[layer_id]->type(), "Convolution") == 0 ||
-          strcmp(layers_[layer_id]->type(), "InnerProduct") == 0) {
+          strcmp(layers_[layer_id]->type(), "InnerProduct") == 0 ||
+          strcmp(layers_[layer_id]->type(), "ConvolutionDepthwise") == 0) {
         layer_name->push_back(this->layer_names()[layer_id]);
         max_in->push_back(0);
         max_out->push_back(0);
@@ -400,8 +401,9 @@ void Net<Dtype>::RangeInLayers(vector<string>* layer_name,
   int index = 0;
   Dtype max_val;
   for (int layer_id = 0; layer_id < layers_.size(); ++layer_id) {
-    if (strcmp(layers_[layer_id]->type(), "Convolution") == 0 ||
-          strcmp(layers_[layer_id]->type(), "InnerProduct") == 0) {
+      if (strcmp(layers_[layer_id]->type(), "Convolution") == 0 ||
+          strcmp(layers_[layer_id]->type(), "InnerProduct") == 0 ||
+          strcmp(layers_[layer_id]->type(), "ConvolutionDepthwise") == 0){
       max_val = findMax(bottom_vecs_[layer_id][0]);
       max_in->at(index) = std::max(max_in->at(index), max_val);
       max_val = findMax(top_vecs_[layer_id][0]);
