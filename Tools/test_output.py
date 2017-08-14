@@ -1,43 +1,48 @@
 #coding=utf-8
 #import libraries
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os,sys,caffe,time
 
 matplotlib = 'incline'
 model_dir = os.getcwd() +'/'
-deploy_filename = 'deploy.prototxt'
-caffemodel_filename = 'bvlc_alexnet.caffemodel'
-img_root = 'cat.jpg'
-bin_mean_filename = 'imagenet_mean.binaryproto'
+# deploy_filename = 'deploy.prototxt'
+# caffemodel_filename = 'bvlc_googlenet.caffemodel'
+# img_root = 'cat.jpg'
+# bin_mean_filename = 'imagenet_mean.binaryproto'
+# npy_mean_filename = 'imagenet_mean.npy'
+# labels_filename = 'synset_words.txt'
+
+#**************************system argument*************************#
+deploy_filename = sys.argv[1]
+caffemodel_filename = sys.argv[2]
+img_root = sys.argv[3]
+bin_mean_filename = sys.argv[4]
 npy_mean_filename = 'imagenet_mean.npy'
-labels_filename = 'synset_words.txt'
+labels_filename = sys.argv[5]
 output_dir = 'output/'
-plt.rcParams['figure.figsize'] = (8,8)
-plt.rcParams['image.interpolation'] = 'nearest'
+#plt.rcParams['figure.figsize'] = (8,8)
+#plt.rcParams['image.interpolation'] = 'nearest'
 
 caffe.set_mode_cpu()
-# print "**********************************************************************************"
 net = caffe.Net(model_dir+deploy_filename,
 	model_dir+caffemodel_filename,
 	caffe.TEST)
 
-[(k,v[0].data.shape) for k, v in net.params.items()]
-net.blobs['data'].data.shape
-
-def show_data(data,title,padsize=1,padval=0):
-	data -= data.min()
-	data /= data.max()
-	n = int(np.ceil(np.sqrt(data.shape[0])))
-	padding = ((0, n ** 2 - data.shape[0]), (0, padsize), (0, padsize)) + ((0, 0),) * (data.ndim - 3)
-	data = np.pad(data,padding,mode='constant',constant_values=(padval, padval))
-	# tile the filters into an image
-	data = data.reshape((n, n) + data.shape[1:]).transpose((0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
-	data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-	plt.figure(), plt.title(title)
-	plt.imshow(data, cmap='gray')
-	# plt.imshow(data)
-	plt.axis('off')
+#**************************show_data function*************************#
+# def show_data(data,title,padsize=1,padval=0):
+# 	data -= data.min()
+# 	data /= data.max()
+# 	n = int(np.ceil(np.sqrt(data.shape[0])))
+# 	padding = ((0, n ** 2 - data.shape[0]), (0, padsize), (0, padsize)) + ((0, 0),) * (data.ndim - 3)
+# 	data = np.pad(data,padding,mode='constant',constant_values=(padval, padval))
+# 	# tile the filters into an image
+# 	data = data.reshape((n, n) + data.shape[1:]).transpose((0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
+# 	data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
+# 	plt.figure(), plt.title(title)
+# 	plt.imshow(data, cmap='gray')
+# 	# plt.imshow(data)
+# 	plt.axis('off')
 
 def convert_mean(binMean, npyMean):
 	blob = caffe.proto.caffe_pb2.BlobProto()
@@ -50,19 +55,9 @@ binMean = model_dir + bin_mean_filename
 npyMean = model_dir + npy_mean_filename
 convert_mean(binMean, npyMean)
 
-start = time.time()
+#start = time.time()
 
 im = caffe.io.load_image(model_dir + img_root)
-print 'image_data:',im.shape
-
-if(os.path.exists(output_dir+'alexnet_image.txt')):
-	os.remove(output_dir+'alexnet_image.txt')
-f=open(output_dir+'alexnet_image.txt','a')
-for height in range(260):
-	print >>f,'\n'+'height='+str(height) +'\n'
-	for width in range(480):
-		for chanel in range(3):
-			f.write(str(im[height][width][chanel])+' ')
 
 
 
@@ -73,409 +68,234 @@ transformer.set_raw_scale('data', 255)
 transformer.set_channel_swap('data', (2,1,0))
 net.blobs['data'].data[...] = transformer.preprocess('data', im)
 
-print 'mean-substracted values:', zip(np.load(npyMean).mean(1).mean(1))
-if(os.path.exists(output_dir+'alexnet_mean.txt')):
-	os.remove(output_dir+'alexnet_mean.txt')
-f=open(output_dir+'alexnet_mean.txt','a')
-f.write('\n\nmean-substracted values::'+str(zip(np.load(npyMean).mean(1).mean(1)))+'\n')
-# inputData = net.blobs['data'].data
-# plt.figure()
-# plt.subplot(1,2,1),plt.title("origin")
-# plt.imshow(im)
-# plt.axis('off')
-# plt.subplot(1,2,2),plt.title("subtract mean")
-# plt.imshow(transformer.deprocess('data',net.blobs['data'].data[0]))
-# plt.axis('off')
+
 
 out = net.forward()
+
+#**************************a test*************************#
+#print '\ndata_shape\n'
+#print [(k, v.data.shape) for k, v in net.blobs.items()]
+#print '\nbias_shape\n'
+##print [(k, v[1].data.shape) for k, v in net.params.items()]
+#print '\nparams_shape\n'
+#print [(k, v[0].data.shape) for k, v in net.params.items()]
+# start = time.time()
+# for k,v in net.blobs.items():
+# 	print 'layer:',k,v.data.shape
+# 	if(os.path.exists(output_dir+'vgg19_'+str(k)+'.txt')):
+# 		os.remove(output_dir+'vgg19_'+str(k)+'.txt')
+# 	f=open(output_dir+'vgg19__'+str(k)+'.txt','a')
+# 	if(v.data.ndim!=2):
+# 		#print 'shape:',v.data.shape[0],v.data.shape[1],v.data.shape[2],v.data.shape[3]
+# 		# print 'conv1_1:',net.blobs['conv1_1'].data.shape
+# 		f.write('\nconv1_1 layer:'+' \n')
+# 		for batch in v.data:
+# 	  		for output_num in batch:
+# 	  			#print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
+# 	  			for height in output_num:
+# 	  		 		#print >>f,'\n'
+# 	  		 		for width in height:
+# 	  					#f.write(str(width)+' ')
+# 	  					nnan=1
+# 	else:
+# 		for batch in v.data:
+# 		  	for output_num in batch:
+# 		  		#.write(str(output_num)+' ')
+# 		  		nnan=1
+# print("\nDone in %.2f s.\n" % (time.time() - start))#计算时间
+#print '\ndata_shape\n'
+#print [(k, v.data.shape) for k, v in net.blobs.items()]
+#print '\nbias_shape\n'
+# print [(k, v[1].data.shape) for k, v in net.params.items()]
+#print '\nparams_shape\n'
+#print [(k, v[0].data.shape) for k, v in net.params.items()]
+#*********************************************************#
+
+
+start = time.time()
 print '\ndata_shape\n'
-print [(k, v.data.shape) for k, v in net.blobs.items()]
-print '\nbias_shape\n'
-print [(k, v[0].data.shape) for k, v in net.params.items()]
+file_dir=os.path.dirname(output_dir +'data_shape.txt')
+if(os.path.exists(file_dir)==False):
+	os.mkdir(file_dir)
+	print 'mkdir:',file_dir
+if(os.path.exists(output_dir+'data_shape'+'.txt')):
+	os.remove(output_dir+'data_shape'+'.txt')
+f=open(output_dir+'data_shape'+'.txt','a')
+for k, v in net.blobs.items():
+	print >>f,k,v.data.shape
+
 print '\nparams_shape\n'
-print [(k, v[0].data.shape) for k, v in net.params.items()]
+if(os.path.exists(output_dir+'params_shape'+'.txt')):
+	os.remove(output_dir+'params_shape'+'.txt')
+f=open(output_dir+'params_shape'+'.txt','a')
+for k,v in net.params.items():
+	params_dim = 0
+	for i in v :
+		print >>f,k,'['+str(params_dim)+']',i.data.shape
+		params_dim +=1
 
-# data 
-print '\ninput:',net.blobs['data'].data.shape
-if(os.path.exists(output_dir+'alexnet_data.txt')):
-	os.remove(output_dir+'alexnet_data.txt')
-f=open(output_dir+'alexnet_data.txt','a')
-for batch in range(10):
-	for channel in range(3):
-		print >>f,'\n'+'batch='+str(batch)+' '+'channel='+str(channel)+' '+'\n'
-		for height in range(227):
-			print >>f,'\n'
-			for width in range(227):
-				f.write(str(net.blobs['data'].data[batch][channel][height][width])+' ')
+#*********************** pause **********************************#
+#name = input("Please input your name:\n")
 
-#conv1
-print 'conv1:',net.blobs['conv1'].data.shape
-if(os.path.exists(output_dir+'alexnet_conv1.txt')):
-	os.remove(output_dir+'alexnet_conv1.txt')
-f=open(output_dir+'alexnet_conv1.txt','a')
-f.write('\nconv1 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(96):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(55):
-  		 	print >>f,'\n'
-  		 	for width in range(55):
-  				f.write(str(net.blobs['conv1'].data[batch][output_num][height][width])+' ')
+conv_bias_amount = 0
+conv_param_amount = 0
+BN_param_amount = 0
+fc_param_amount = 0
+fc_bias_amount = 0 
 
-print 'conv1_bias:',net.params['conv1'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_conv1_bias.txt')):
-	os.remove(output_dir+'alexnet_conv1_bias.txt')
-f=open(output_dir+'alexnet_conv1_bias.txt','a')
-for kernel in range(96):
-	f.write(str(net.params['conv1'][1].data[kernel])+'  ')
-print 'conv1_params:',net.params['conv1'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_conv1_param.txt')):
-	os.remove(output_dir+'alexnet_conv1_param.txt')
-f=open(output_dir+'alexnet_conv1_param.txt','a')
-for kernel in range(96):
- 	for input_num in range(3):
- 		print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
- 		for height in range(11):
- 			print >>f,'\n'
- 			for width in range(11):
- 				f.write(str(net.params['conv1'][0].data[kernel][input_num][height][width])+' ')
+visualizationLayer_activation_amount = 0
+fc_activation_amount = 0
 
-print 'norm1:',net.blobs['norm1'].data.shape
-if(os.path.exists(output_dir+'alexnet_norm1.txt')):
-	os.remove(output_dir+'alexnet_norm1.txt')
-f=open(output_dir+'alexnet_norm1.txt','a')
-f.write('\nnorm1 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(96):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(55):
-  		 	print >>f,'\n'
-  		 	for width in range(55):
-  				f.write(str(net.blobs['norm1'].data[batch][output_num][height][width])+' ')
+for k,v in net.blobs.items():
+	if(v.data.ndim!=2):
+		#print 'shape:',v.data.shape[0],v.data.shape[1],v.data.shape[2],v.data.shape[3]
+		# print 'conv1_1:',net.blobs['conv1_1'].data.shape
+		visualizationLayer_activation_amount += v.data.shape[0]*v.data.shape[1]*v.data.shape[2]*v.data.shape[3]
+		print str(k),' visualizationLayer_activation_amount :',visualizationLayer_activation_amount,'(',v.data.shape[0]*v.data.shape[1]*v.data.shape[2]*v.data.shape[3],')'
+	else:
+		fc_activation_amount += v.data.shape[0]* v.data.shape[1]
+		print str(k),' fc_activation_amount :',fc_activation_amount,'(',v.data.shape[0]* v.data.shape[1],')'
+v_dim = 0
+for k,v in net.params.items():
+	#***********************Blobvec dim **********************************#
+	v_dim = len(v)
+	#print 'v: ',len(v)
+	#*********************************************************************#
+	fc_status = 0
+	for i in v :
+		if (i.data.ndim!=1 and i.data.ndim!=2):
+			conv_param_amount += i.data.shape[0]*i.data.shape[1]*i.data.shape[2]*i.data.shape[3]
+			print str(k),' conv_param_amount :',conv_param_amount,'(',i.data.shape[0]*i.data.shape[1]*i.data.shape[2]*i.data.shape[3],')'
+		elif (i.data.ndim!=1):
+			fc_status += 1
+			fc_param_amount += i.data.shape[0]*i.data.shape[1]
+			print str(k),' fc_param_amount :',fc_param_amount,'(',i.data.shape[0]*i.data.shape[1],')'
+ 		else:
+ 			if (v_dim == 3):
+ 				BN_param_amount += i.data.shape[0]
+ 				print str(k),' BN_param_amount :',BN_param_amount,'(',i.data.shape[0],')'
+			else:
+				if (fc_status == 0):
+					conv_bias_amount += i.data.shape[0]
+					print str(k),' conv_bias_amount :',conv_bias_amount,'(',i.data.shape[0],')'
+				else:
+					fc_bias_amount += i.data.shape[0]
+					print str(k),' fc_bias_amount :',fc_bias_amount,'(',i.data.shape[0],')'
+					fc_status = 0
 
-print 'pool1:',net.blobs['pool1'].data.shape
-if(os.path.exists(output_dir+'alexnet_pool1.txt')):
-	os.remove(output_dir+'alexnet_pool1.txt')
-f=open(output_dir+'alexnet_pool1.txt','a')
-f.write('\npool1 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(96):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(27):
-  		 	print >>f,'\n'
-  		 	for width in range(27):
-  				f.write(str(net.blobs['pool1'].data[batch][output_num][height][width])+' ')
-
-#conv2
-print 'conv2:',net.blobs['conv2'].data.shape
-if(os.path.exists(output_dir+'alexnet_conv2.txt')):
-	os.remove(output_dir+'alexnet_conv2.txt')
-f=open(output_dir+'alexnet_conv2.txt','a')
-f.write('\nconv2 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(256):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(27):
-  		 	print >>f,'\n'
-  		 	for width in range(27):
-  				f.write(str(net.blobs['conv2'].data[batch][output_num][height][width])+' ')
-
-print 'conv2_bias:',net.params['conv2'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_conv2_bias.txt')):
-	os.remove(output_dir+'alexnet_conv2_bias.txt')
-f=open(output_dir+'alexnet_conv2_bias.txt','a')
-for kernel in range(256):
-	f.write(str(net.params['conv2'][1].data[kernel])+'  ')
-print 'conv2_params:',net.params['conv2'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_conv2_param.txt')):
-	os.remove(output_dir+'alexnet_conv2_param.txt')
-f=open(output_dir+'alexnet_conv2_param.txt','a')
-for kernel in range(256):
- 	for input_num in range(48):
- 		print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
- 		for height in range(5):
- 			print >>f,'\n'
- 			for width in range(5):
- 				f.write(str(net.params['conv2'][0].data[kernel][input_num][height][width])+' ')
-
-print 'norm2:',net.blobs['norm2'].data.shape
-if(os.path.exists(output_dir+'alexnet_norm2.txt')):
-	os.remove(output_dir+'alexnet_norm2.txt')
-f=open(output_dir+'alexnet_norm2.txt','a')
-f.write('\nnorm2 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(256):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(27):
-  		 	print >>f,'\n'
-  		 	for width in range(27):
-  				f.write(str(net.blobs['norm2'].data[batch][output_num][height][width])+' ')
-
-print 'pool2:',net.blobs['pool2'].data.shape
-if(os.path.exists(output_dir+'alexnet_pool2.txt')):
-	os.remove(output_dir+'alexnet_pool2.txt')
-f=open(output_dir+'alexnet_pool2.txt','a')
-f.write('\npool2 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(256):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(13):
-  		 	print >>f,'\n'
-  		 	for width in range(13):
-  				f.write(str(net.blobs['pool2'].data[batch][output_num][height][width])+' ')
-
-#conv3
-print 'conv3:',net.blobs['conv3'].data.shape
-if(os.path.exists(output_dir+'alexnet_conv3.txt')):
-	os.remove(output_dir+'alexnet_conv3.txt')
-f=open(output_dir+'alexnet_conv3.txt','a')
-f.write('\nconv3 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(384):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(13):
-  		 	print >>f,'\n'
-  		 	for width in range(13):
-  				f.write(str(net.blobs['conv3'].data[batch][output_num][height][width])+' ')
-
-print 'conv3_bias:',net.params['conv3'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_conv3_bias.txt')):
-	os.remove(output_dir+'alexnet_conv3_bias.txt')
-f=open(output_dir+'alexnet_conv3_bias.txt','a')
-for kernel in range(384):
-	f.write(str(net.params['conv3'][1].data[kernel])+'  ')
-print 'conv3_params:',net.params['conv3'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_conv3_param.txt')):
-	os.remove(output_dir+'alexnet_conv3_param.txt')
-f=open(output_dir+'alexnet_conv3_param.txt','a')
-for kernel in range(384):
- 	for input_num in range(256):
- 		print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
- 		for height in range(3):
- 			print >>f,'\n'
- 			for width in range(3):
- 				f.write(str(net.params['conv3'][0].data[kernel][input_num][height][width])+' ')
-
-#conv4
-print 'conv4:',net.blobs['conv4'].data.shape
-if(os.path.exists(output_dir+'alexnet_conv4.txt')):
-	os.remove(output_dir+'alexnet_conv4.txt')
-f=open(output_dir+'alexnet_conv4.txt','a')
-f.write('\nconv4 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(384):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(13):
-  		 	print >>f,'\n'
-  		 	for width in range(13):
-  				f.write(str(net.blobs['conv4'].data[batch][output_num][height][width])+' ')
-
-print 'conv4_bias:',net.params['conv4'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_conv4_bias.txt')):
-	os.remove(output_dir+'alexnet_conv4_bias.txt')
-f=open(output_dir+'alexnet_conv4_bias.txt','a')
-for kernel in range(384):
-	f.write(str(net.params['conv4'][1].data[kernel])+'  ')
-print 'conv4_params:',net.params['conv4'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_conv4_param.txt')):
-	os.remove(output_dir+'alexnet_conv4_param.txt')
-f=open(output_dir+'alexnet_conv4_param.txt','a')
-for kernel in range(384):
- 	for input_num in range(192):
- 		print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
- 		for height in range(3):
- 			print >>f,'\n'
- 			for width in range(3):
- 				f.write(str(net.params['conv4'][0].data[kernel][input_num][height][width])+' ')
-
-#conv5
-print 'conv5:',net.blobs['conv5'].data.shape
-if(os.path.exists(output_dir+'alexnet_conv5.txt')):
-	os.remove(output_dir+'alexnet_conv5.txt')
-f=open(output_dir+'alexnet_conv5.txt','a')
-f.write('\nconv5 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(256):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(13):
-  		 	print >>f,'\n'
-  		 	for width in range(13):
-  				f.write(str(net.blobs['conv5'].data[batch][output_num][height][width])+' ')
-
-print 'conv5_bias:',net.params['conv5'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_conv5_bias.txt')):
-	os.remove(output_dir+'alexnet_conv5_bias.txt')
-f=open(output_dir+'alexnet_conv5_bias.txt','a')
-for kernel in range(256):
-	f.write(str(net.params['conv5'][1].data[kernel])+'  ')
-print 'conv5_params:',net.params['conv5'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_conv5_param.txt')):
-	os.remove(output_dir+'alexnet_conv5_param.txt')
-f=open(output_dir+'alexnet_conv5_param.txt','a')
-for kernel in range(256):
- 	for input_num in range(192):
- 		print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
- 		for height in range(3):
- 			print >>f,'\n'
- 			for width in range(3):
- 				f.write(str(net.params['conv5'][0].data[kernel][input_num][height][width])+' ')
-
-
-print 'pool5:',net.blobs['pool5'].data.shape
-if(os.path.exists(output_dir+'alexnet_pool5.txt')):
-	os.remove(output_dir+'alexnet_pool5.txt')
-f=open(output_dir+'alexnet_pool5.txt','a')
-f.write('\npool5 layer:'+' \n')
-for batch in range(10):
-  	for output_num in range(256):
-  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
-  		for height in range(6):
-  		 	print >>f,'\n'
-  		 	for width in range(6):
-  				f.write(str(net.blobs['pool5'].data[batch][output_num][height][width])+' ')
-
-#fc6
-print 'fc6:',net.blobs['fc6'].data.shape
-
-if(os.path.exists(output_dir+'alexnet_fc6.txt')):
-	os.remove(output_dir+'alexnet_fc6.txt')
-f=open(output_dir+'alexnet_fc6.txt','a')
-for batch in range(10):
-  	for output_num in range(4096):
-  		f.write(str(net.blobs['fc6'].data[batch][output_num])+' ')
-
-
-print 'fc6_bias:',net.params['fc6'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_fc6_bias.txt')):
-	os.remove(output_dir+'alexnet_fc6_bias.txt')
-f=open(output_dir+'alexnet_fc6_bias.txt','a')
-for neturalUnit_num in range(4096):
- 	f.write(str(net.params['fc6'][1].data[neturalUnit_num])+' ')
-print 'fc6_params:',net.params['fc6'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_fc6_param.txt')):
-	os.remove(output_dir+'alexnet_fc6_param.txt')
-f=open(output_dir+'alexnet_fc6_param.txt','a')
-for neturalUnit_num in range(4096):
-	print >>f,'\n\n neturalUnit_num='+str(neturalUnit_num)+'\n'
- 	for map_num in range(9216):
- 		f.write(str(net.params['fc6'][0].data[neturalUnit_num][map_num])+' ')
-
-#fc7
-print 'fc7:',net.blobs['fc7'].data.shape
-
-if(os.path.exists(output_dir+'alexnet_fc7.txt')):
-	os.remove(output_dir+'alexnet_fc7.txt')
-f=open(output_dir+'alexnet_fc7.txt','a')
-for batch in range(10):
-  	for output_num in range(4096):
-  		f.write(str(net.blobs['fc7'].data[batch][output_num])+' ')
-
-
-print 'fc7_bias:',net.params['fc7'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_fc7_bias.txt')):
-	os.remove(output_dir+'alexnet_fc7_bias.txt')
-f=open(output_dir+'alexnet_fc7_bias.txt','a')
-for neturalUnit_num in range(4096):
- 	f.write(str(net.params['fc7'][1].data[neturalUnit_num])+' ')
-
-print 'fc7_params:',net.params['fc7'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_fc7_param.txt')):
-	os.remove(output_dir+'alexnet_fc7_param.txt')
-f=open(output_dir+'alexnet_fc7_param.txt','a')
-for neturalUnit_num in range(4096):
-	print >>f,'\n\n neturalUnit_num='+str(neturalUnit_num)+'\n'
- 	for map_num in range(4096):
- 		f.write(str(net.params['fc7'][0].data[neturalUnit_num][map_num])+' ')
-
-#fc8
-print 'fc8:',net.blobs['fc8'].data.shape
-
-if(os.path.exists(output_dir+'alexnet_fc8.txt')):
-	os.remove(output_dir+'alexnet_fc8.txt')
-f=open(output_dir+'alexnet_fc8.txt','a')
-for batch in range(10):
-  	for output_num in range(1000):
-  		f.write(str(net.blobs['fc8'].data[batch][output_num])+' ')
-
-
-print 'fc8_bias:',net.params['fc8'][1].data.shape
-if(os.path.exists(output_dir+'alexnet_fc8_bias.txt')):
-	os.remove(output_dir+'alexnet_fc8_bias.txt')
-f=open(output_dir+'alexnet_fc8_bias.txt','a')
-for neturalUnit_num in range(1000):
- 	f.write(str(net.params['fc8'][1].data[neturalUnit_num])+' ')
-print 'fc8_params:',net.params['fc8'][0].data.shape
-if(os.path.exists(output_dir+'alexnet_fc8_param.txt')):
-	os.remove(output_dir+'alexnet_fc8_param.txt')
-f=open(output_dir+'alexnet_fc8_param.txt','a')
-for neturalUnit_num in range(1000):
-	print >>f,'\n\n neturalUnit_num='+str(neturalUnit_num)+'\n'
- 	for map_num in range(4096):
- 		f.write(str(net.params['fc8'][0].data[neturalUnit_num][map_num])+' ')
+print 'visualizationLayer_activation_amount:',visualizationLayer_activation_amount
+print 'fc_activation_amount:',fc_activation_amount
+print 'conv_param_amount:',conv_param_amount
+print 'conv_bias_amount:',conv_bias_amount
+print 'BN_param_amount:',BN_param_amount
+print 'fc_param_amount:',fc_param_amount
+print 'fc_bias_amount:',fc_bias_amount
 
 
 
- # *****************************probable layer's data & params****************************
-output_prob = out['prob'][0]
-print 'prob:',net.blobs['prob'].data.shape
-if(os.path.exists(output_dir+'alexnet_prob.txt')):
-	os.remove(output_dir+'alexnet_prob.txt')
-f=open(output_dir+'alexnet_prob.txt','a')
-f.write('\nprob layer:'+' \n')
-for batch in range(10):
-  	for channel in range(1000):
-  		f.write(str(net.blobs['prob'].data[batch][channel])+' ')
+
+
+###**********************output data*****************************###
+for k,v in net.blobs.items():
+	print 'layer:',k,v.data.shape
+	file_dir=os.path.dirname(output_dir +str(k)+'.txt')
+	if(os.path.exists(file_dir)==False):
+		os.mkdir(file_dir)
+		print 'mkdir:',file_dir
+	if(os.path.exists(output_dir+'vgg4*'+str(k)+'.txt')):
+		os.remove(output_dir+str(k)+'.txt')
+	f=open(output_dir+str(k)+'.txt','a')
+	if(v.data.ndim!=2):
+		#print 'shape:',v.data.shape[0],v.data.shape[1],v.data.shape[2],v.data.shape[3]
+		# print 'conv1_1:',net.blobs['conv1_1'].data.shape
+		f.write('\nconv1_1 layer:'+' \n')
+		for batch in range(v.data.shape[0]):
+		  	for output_num in range(v.data.shape[1]):
+		  		print >>f,'\n\n'+'batch='+str(batch)+' '+'output_num='+str(output_num)+' '
+		  		for height in range(v.data.shape[2]):
+		  		 	print >>f,'\n'
+		  		 	for width in range(v.data.shape[3]):
+		  				f.write(str(v.data[batch][output_num][height][width])+' ')
+	else:
+		for batch in range(v.data.shape[0]):
+		  	for output_num in range(v.data.shape[1]):
+		  		f.write(str(v.data[batch][output_num])+' ')
+				# #print 'shape:',v.data.shape[0],v.data.shape[1]
+				# #print 'shape:',v.data.shape[0],v.data.shape[1]
+
+
+# ###**********************v2 writting  bias*****************************###
+#for k,v in net.params.items():
+#	#print 'layer:',k
+#	#print 'shape:',v[1].data.shape[0]
+#	print 'bias:',k,v[1].data.shape
+#	if(os.path.exists(output_dir+'vgg19_'+str(k)+'_bias.txt')):
+#		os.remove(output_dir+'vgg19_'+str(k)+'_bias.txt')
+#	f=open(output_dir+'vgg19_'+str(k)+'_bias.txt','a')
+#	for kernel in range(v[1].data.shape[0]):
+#		f.write(str(net.params[k][1].data[kernel])+'  ')
+#*********************************************************#
+
+for k,v in net.params.items():
+	params_dim = 0
+	for i in v :
+		file_dir=os.path.dirname(output_dir +str(k)+'.txt')
+		if(os.path.exists(file_dir)==False):
+			os.mkdir(file_dir)
+			print 'mkdir:',file_dir
+		if(os.path.exists(output_dir+str(k)+'_param['+str(params_dim)+'].txt')):
+			os.remove(output_dir+str(k)+'_param['+str(params_dim)+'].txt')
+		f=open(output_dir+str(k)+'_param['+str(params_dim)+'].txt','a')
+		params_dim += 1
+		if (i.data.ndim!=1 and i.data.ndim!=2):
+			print 'layer:',k,i.data.shape,'dim:',i.data.ndim
+			for kernel in range(i.data.shape[0]):
+		 		for input_num in range(i.data.shape[1]):
+		 			print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
+		 			for height in range(i.data.shape[2]): 
+		 				print >>f,'\n'
+		 				for width in range(i.data.shape[3]):
+		 					f.write(str(i.data[kernel][input_num][height][width])+' ')
+		elif (i.data.ndim!=1):
+			print 'layer:',k,i.data.shape,'dim:',i.data.ndim
+			for neturalUnit_num in range(i.data.shape[0]):
+				print >>f,'\n\n neturalUnit_num='+str(neturalUnit_num)+'\n'
+ 				for map_num in range(i.data.shape[1]):
+ 					f.write(str(i.data[neturalUnit_num][map_num])+' ')
+ 		else:
+ 			print 'layer:',k,i.data.shape,'dim:',i.data.ndim
+ 			for neturalUnit_num in range(i.data.shape[0]):
+ 					f.write(str(i.data[neturalUnit_num])+' ')
+			#print 'layer:',k,i.data.shape,'dim:',i.data.ndim
 
 
 
-labels = np.loadtxt(model_dir+labels_filename, str, delimiter='\t')
-top_k = net.blobs['prob'].data[0].flatten().argsort()[::-1]
-## ***************************************************************
-
-print 'predict:'
-if(os.path.exists(output_dir+'alexnet_predict.txt')):
-	os.remove(output_dir+'alexnet_predict.txt')
-f=open(output_dir+'alexnet_predict.txt','a')
-f.write('\nprob layer:'+' \n')
-#print "top_k,soft of the num: ",top_k
-
-f.write('\n\npredicted class is:'+str(output_prob.argmax())+' '+str(output_prob[output_prob.argmax()])+'\n')
-f.write('\n\nprobabilities and labels:'+str(zip(output_prob[top_k], labels[top_k]))+'\n')
-
-# print 'predicted class is:', output_prob.argmax(),output_prob[output_prob.argmax()]
-# print 'output label:', labels[output_prob.argmax()]
-# print 'probabilities and labels:'
+# ##*****************************************v2 writing the params*************************##
+# for k,v in net.params.items():
+# 	print 'params:',k,v[0].data.shape
+# 	if(os.path.exists(output_dir+'vgg19_'+str(k)+'_param.txt')):
+# 		os.remove(output_dir+'vgg19_'+str(k)+'_param.txt')
+# 	f=open(output_dir+'vgg19_'+str(k)+'_param.txt','a')
+# 	if(v[0].data.ndim!=2):
+# 		for kernel in range(v[0].data.shape[0]):
+# 		 	for input_num in range(v[0].data.shape[1]):
+# 		 		#print >>f,'\n\n'+'kernel='+str(kernel)+' '+'input_num='+str(input_num)+' '+'\n'
+# 		 		for height in range(v[0].data.shape[2]): 
+# 		 			#print >>f,'\n'
+# 		 			for width in range(v[0].data.shape[3]):
+# 		 				f.write(str(net.params[k][0].data[kernel][input_num][height][width])+' ')
+# 		#print 'shape:',v[0].data.shape[0],v[0].data.shape[1],v[0].data.shape[2],v[0].data.shape[3]
+# 	else:
+# 		for neturalUnit_num in range(v[0].data.shape[0]):
+# 			#print >>f,'\n\n neturalUnit_num='+str(neturalUnit_num)+'\n'
+#  			for map_num in range(v[0].data.shape[1]):
+#  				f.write(str(net.params[k][0].data[neturalUnit_num][map_num])+' ')
+# 		#print 'shape:',v[0].data.shape[0],v[0].data.shape[1]
+#*********************************************************#
 
 print("\nDone in %.2f s.\n" % (time.time() - start))#计算时间
 
 
 
-####***********************************************************************************
-show_data(net.params['conv5'][0].data[0],"conv5_params")
-show_data(net.blobs['conv5'].data[0],"conv5")
 
-show_data(net.params['conv4'][0].data[0],"conv4_params")
-show_data(net.blobs['conv4'].data[0],"conv4")
-
-show_data(net.params['conv3'][0].data[0],"conv3_params")
-show_data(net.blobs['conv3'].data[0],"conv3")
-
-show_data(net.blobs['pool2'].data[0],"pool2")
-show_data(net.blobs['norm2'].data[0], "norm2")
-show_data(net.params['conv2'][0].data[0],"conv2_params")
-show_data(net.blobs['conv2'].data[0],"conv2")
-
-
-show_data(net.blobs['pool1'].data[0],"pool1")
-show_data(net.blobs['norm1'].data[0], "norm1")
-show_data(net.params['conv1'][0].data.transpose(0,2,3,1).squeeze(),'conv1_params')
-show_data(net.blobs['conv1'].data[0], "conv1")
-
-show_data(net.blobs['data'].data[0], "data")
-
-plt.imshow(im)
-plt.axis('off')
-
-
-
-plt.show()
+# print("\nDone in %.2f s.\n" % (time.time() - start))#计算时间
