@@ -165,13 +165,6 @@ void Quantization::Quantize2DynamicFixedPoint() {
     il_out_.push_back((int)ceil(log2(max_out_[i])));
     il_params_.push_back((int)ceil(log2(max_params_[i])+1));
   }
-  // Debug
-  for (int k = 0; k < layer_names_.size(); ++k) {
-    LOG(INFO) << "Layer " << layer_names_[k] <<
-        ", integer length input=" << il_in_[k] <<
-        ", integer length output=" << il_out_[k] <<
-        ", integer length parameters=" << il_params_[k];
-  }
 
   // Score net with dynamic fixed point convolution parameters.
   // The rest of the net remains in high precision format.
@@ -406,28 +399,101 @@ void Quantization::Quantize2IntegerPowerOf2Weights() {
 void Quantization::EditNetDescriptionDynamicFixedPoint(NetParameter* param,
       const string layers_2_quantize, const string net_part, const int bw_conv,
       const int bw_fc, const int bw_in, const int bw_out) {
+  int bit_set = 0; 
   for (int i = 0; i < param->layer_size(); ++i) {
     // if this is a convolutional layer which should be quantized ...
     if (layers_2_quantize.find("Convolution") != string::npos &&
+        param->layer(i).type().find("ConvolutionDepthwise") == string::npos &&
         param->layer(i).type().find("Convolution") != string::npos) {
       // quantize parameters
+      bit_set = bw_conv;
       if (net_part.find("Parameters") != string::npos) {
         LayerParameter* param_layer = param->mutable_layer(i);
         param_layer->set_type("ConvolutionRistretto");
-        param_layer->mutable_quantization_param()->set_fl_params(bw_conv -
+        if(bw_conv - GetIntegerLengthParams(param->layer(i).name()) >= 0) {
+            param_layer->mutable_quantization_param()->set_fl_params(bw_conv -
             GetIntegerLengthParams(param->layer(i).name()));
-        param_layer->mutable_quantization_param()->set_bw_params(bw_conv);
+        }
+        else 
+        {
+          bit_set = GetIntegerLengthParams(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_params(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_params(bit_set);
+
       }
       // quantize activations
       if (net_part.find("Activations") != string::npos) {
         LayerParameter* param_layer = param->mutable_layer(i);
         param_layer->set_type("ConvolutionRistretto");
-        param_layer->mutable_quantization_param()->set_fl_layer_in(bw_in -
+        bit_set = bw_in;
+        if(bw_in - GetIntegerLengthIn(param->layer(i).name()) >= 0) {
+          param_layer->mutable_quantization_param()->set_fl_layer_in(bw_in -
             GetIntegerLengthIn(param->layer(i).name()));
-        param_layer->mutable_quantization_param()->set_bw_layer_in(bw_in);
-        param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
+        }
+        else {
+          bit_set = GetIntegerLengthIn(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_layer_in(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_layer_in(bit_set);
+
+        bit_set = bw_out;
+        if(bw_out - GetIntegerLengthOut(param->layer(i).name())) {
+          param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
             GetIntegerLengthOut(param->layer(i).name()));
-        param_layer->mutable_quantization_param()->set_bw_layer_out(bw_out);
+        }
+        else {
+          bit_set = GetIntegerLengthOut(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_layer_out(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_layer_out(bit_set);
+
+      }
+    }
+    // quantize convolution depthwise
+    if (layers_2_quantize.find("Convolution") != string::npos &&
+        param->layer(i).type().find("ConvolutionDepthwise") != string::npos) {
+      // quantize parameters
+      bit_set = bw_conv;
+      if (net_part.find("Parameters") != string::npos) {
+        LayerParameter* param_layer = param->mutable_layer(i);
+        param_layer->set_type("ConvolutionDepthwiseRistretto");
+        if(bw_conv - GetIntegerLengthParams(param->layer(i).name()) >= 0) {
+            param_layer->mutable_quantization_param()->set_fl_params(bw_conv -
+            GetIntegerLengthParams(param->layer(i).name()));
+        }
+        else 
+        {
+          bit_set = GetIntegerLengthParams(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_params(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_params(bit_set);
+      }
+      // quantize activations
+      if (net_part.find("Activations") != string::npos) {
+        LayerParameter* param_layer = param->mutable_layer(i);
+        param_layer->set_type("ConvolutionDepthwiseRistretto");
+        bit_set = bw_in;
+        if(bw_in - GetIntegerLengthIn(param->layer(i).name()) >= 0) {
+          param_layer->mutable_quantization_param()->set_fl_layer_in(bw_in -
+            GetIntegerLengthIn(param->layer(i).name()));
+        }
+        else {
+          bit_set = GetIntegerLengthIn(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_layer_in(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_layer_in(bit_set);
+
+        bit_set = bw_out;
+        if(bw_out - GetIntegerLengthOut(param->layer(i).name())) {
+          param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
+            GetIntegerLengthOut(param->layer(i).name()));
+        }
+        else {
+          bit_set = GetIntegerLengthOut(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_layer_out(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_layer_out(bit_set);
       }
     }
     // if this is an inner product layer which should be quantized ...
@@ -438,20 +504,46 @@ void Quantization::EditNetDescriptionDynamicFixedPoint(NetParameter* param,
       if (net_part.find("Parameters") != string::npos) {
         LayerParameter* param_layer = param->mutable_layer(i);
         param_layer->set_type("FcRistretto");
+        bit_set = bw_fc;
+        if (bw_fc - GetIntegerLengthParams(param->layer(i).name()) >= 0) {
+          param_layer->mutable_quantization_param()->set_fl_params(bw_fc -
+            GetIntegerLengthParams(param->layer(i).name()));
+        }
+        else {
+          bit_set = GetIntegerLengthParams(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_params(0);
+        }
         param_layer->mutable_quantization_param()->set_fl_params(bw_fc -
             GetIntegerLengthParams(param->layer(i).name()));
-        param_layer->mutable_quantization_param()->set_bw_params(bw_fc);
+        param_layer->mutable_quantization_param()->set_bw_params(bit_set);
       }
       // quantize activations
       if (net_part.find("Activations") != string::npos) {
         LayerParameter* param_layer = param->mutable_layer(i);
         param_layer->set_type("FcRistretto");
-        param_layer->mutable_quantization_param()->set_fl_layer_in(bw_in -
+        bit_set = bw_in;
+        if (bw_in - GetIntegerLengthIn(param->layer(i).name()) >= 0) { 
+          param_layer->mutable_quantization_param()->set_fl_layer_in(bw_in -
             GetIntegerLengthIn(param->layer(i).name()) );
-        param_layer->mutable_quantization_param()->set_bw_layer_in(bw_in);
-        param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
+        }
+        else {
+          bit_set = GetIntegerLengthIn(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_layer_in(0);
+
+        }
+        param_layer->mutable_quantization_param()->set_bw_layer_in(bit_set);
+
+        bit_set = bw_out;
+        if (bw_out - GetIntegerLengthOut(param->layer(i).name()) >= 0) {
+          param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
             GetIntegerLengthOut(param->layer(i).name()) );
-        param_layer->mutable_quantization_param()->set_bw_layer_out(bw_out);
+        }
+        else {
+          bit_set = GetIntegerLengthOut(param->layer(i).name());
+          param_layer->mutable_quantization_param()->set_fl_layer_out(0);
+        }
+        param_layer->mutable_quantization_param()->set_bw_layer_out(bit_set);
+
       }
     }
   }
