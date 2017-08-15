@@ -406,10 +406,10 @@ void Quantization::EditNetDescriptionDynamicFixedPoint(NetParameter* param,
         param->layer(i).type().find("ConvolutionDepthwise") == string::npos &&
         param->layer(i).type().find("Convolution") != string::npos) {
       // quantize parameters
-      bit_set = bw_conv;
       if (net_part.find("Parameters") != string::npos) {
         LayerParameter* param_layer = param->mutable_layer(i);
         param_layer->set_type("ConvolutionRistretto");
+        bit_set = bw_conv;
         if(bw_conv - GetIntegerLengthParams(param->layer(i).name()) >= 0) {
             param_layer->mutable_quantization_param()->set_fl_params(bw_conv -
             GetIntegerLengthParams(param->layer(i).name()));
@@ -438,7 +438,7 @@ void Quantization::EditNetDescriptionDynamicFixedPoint(NetParameter* param,
         param_layer->mutable_quantization_param()->set_bw_layer_in(bit_set);
 
         bit_set = bw_out;
-        if(bw_out - GetIntegerLengthOut(param->layer(i).name())) {
+        if(bw_out - GetIntegerLengthOut(param->layer(i).name()) >= 0 ) {
           param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
             GetIntegerLengthOut(param->layer(i).name()));
         }
@@ -454,10 +454,10 @@ void Quantization::EditNetDescriptionDynamicFixedPoint(NetParameter* param,
     if (layers_2_quantize.find("Convolution") != string::npos &&
         param->layer(i).type().find("ConvolutionDepthwise") != string::npos) {
       // quantize parameters
-      bit_set = bw_conv;
       if (net_part.find("Parameters") != string::npos) {
         LayerParameter* param_layer = param->mutable_layer(i);
         param_layer->set_type("ConvolutionDepthwiseRistretto");
+        bit_set = bw_conv;
         if(bw_conv - GetIntegerLengthParams(param->layer(i).name()) >= 0) {
             param_layer->mutable_quantization_param()->set_fl_params(bw_conv -
             GetIntegerLengthParams(param->layer(i).name()));
@@ -485,7 +485,7 @@ void Quantization::EditNetDescriptionDynamicFixedPoint(NetParameter* param,
         param_layer->mutable_quantization_param()->set_bw_layer_in(bit_set);
 
         bit_set = bw_out;
-        if(bw_out - GetIntegerLengthOut(param->layer(i).name())) {
+        if(bw_out - GetIntegerLengthOut(param->layer(i).name()) >= 0) {
           param_layer->mutable_quantization_param()->set_fl_layer_out(bw_out -
             GetIntegerLengthOut(param->layer(i).name()));
         }
