@@ -2,6 +2,7 @@
 
 #include "caffe/layers/conv_layer.hpp"
 #include "caffe/binary.hpp"
+// outpu inlcude
 #include <iostream> 
 #include <iomanip>
 #include <fstream>
@@ -9,7 +10,7 @@
 
 extern bool BINARY;
 extern bool TERNARY;
-using namespace std; 
+
 namespace caffe {
 
 template <typename Dtype>
@@ -39,7 +40,7 @@ if(BINARY){
 } 
 
 if(TERNARY){
-  this->blobs_[0]->ternarize_data(this->phase_);  //quantized from blob[0] to ternary sand stored in cpu_binary()
+  this->blobs_[0]->ternarize_data(this->phase_);
 /*
     Dtype alpha = (Dtype) this->blobs_[0]->get_alpha();
 
@@ -50,26 +51,9 @@ for(int i=0; i<bottom.size(); i++){
 */
 }
   ConvolutionParameter conv_param = this->layer_param_.convolution_param();
-  // Output blob
-  // this->blobs_[0]->ternarize_data(this->phase_);
-  // caffe_copy(this->blobs_[0]->count(), this->blobs_[0]->cpu_binary(),
-  //     this->blobs_[0]->mutable_cpu_data());
-  // if (this->bias_term_) {
-  //   caffe_copy(this->blobs_[1]->count(), this->blobs_[1]->cpu_binary(),
-  //       this->blobs_[1]->mutable_cpu_data());
-  // }
-
-
-
-  const Dtype* weight = (BINARY || TERNARY) ? this->blobs_[0]->cpu_binary() : this->blobs_[0]->cpu_data();
-  // // LOG(INFO) << "Outputdebug: "<< *weight;
-  // // cout << *weight;
-  // string ssstr = this->layer_param_.name();
-  // char * pstr=new char [ssstr.length()+1];
-  // strcat(pstr,ssstr);
   this->blobs_[0]->ternarize_data(this->phase_);
   const Dtype* weight_ternarize =  this->blobs_[0]->cpu_binary() ;
-  ofstream fp("/home/zcr/output_weight_ternarize.txt", ios::out | ios::app);
+ std::ofstream fp("/home/zcr/output_weight_ternarize.txt", ios::out | ios::app);
   //ofstream fp(pstr);
   LOG(INFO) << "Outputdebug: 写入信息";
   LOG(INFO) << "Outputdebug: "<< "num_output(0)"<<conv_param.num_output();
@@ -81,22 +65,18 @@ for(int i=0; i<bottom.size(); i++){
     fp << *(weight_ternarize+i) << " " ;
   }
   fp << " " << endl ;
+  if (this->bias_term_) {
+    fp << this->layer_param_.name()<<": bias" <<endl;
+    const Dtype* weight_ternarize_bias =  this->blobs_[1]->cpu_binary() ;
+    for(int i = 0; i <conv_param.num_output() ; i++){
+      fp << *(weight_ternarize_bias+i) << " " ;
+    }
+  }
+  fp << " " << endl ;
   fp.close();
 
-  ofstream original_weight("/home/zcr/output_original_weight.txt", ios::out | ios::app);
-  //ofstream fp(pstr);
-  LOG(INFO) << "Outputdebug: 写入信息";
-  LOG(INFO) << "Outputdebug: "<< "num_output(0)"<<conv_param.num_output();
-  LOG(INFO) << "Outputdebug: "<< "channels_"<<this->channels_;
-  LOG(INFO) << "Outputdebug: "<< "kernel_size(0)"<<conv_param.kernel_size(0);
-  LOG(INFO) << "Outputdebug: "<< " this->layer_param_."<< this->layer_param_.name();
-  original_weight << this->layer_param_.name() <<endl;
-  for(int i = 0; i <conv_param.num_output() * this->channels_ * conv_param.kernel_size(0) * conv_param.kernel_size(0); i++){
-    original_weight << *(weight+i) << " " ;
-  }
-  original_weight << " " << endl ;
-  original_weight.close();
 
+  const Dtype* weight = (BINARY || TERNARY) ? this->blobs_[0]->cpu_binary() : this->blobs_[0]->cpu_data();
 
 
   for (int i = 0; i < bottom.size(); ++i) {
